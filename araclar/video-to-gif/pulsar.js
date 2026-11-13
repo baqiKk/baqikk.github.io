@@ -16,8 +16,9 @@
   const SPEED = 0.22;       // salınım hızı (rad/sn) — bir tur ~28 sn, sakin
   const BEAM_LEN = 120;     // ışın uzunluğu (kart birimi), ekran kenarına kadar uzanır
   const WAVE_EVERY = 7;     // yeni dalga aralığı (sn)
-  const WAVE_LIFE = 14;     // dalganın sönme süresi (sn) — yavaş açılır
-  const WAVE_REACH = 60;    // dalganın ulaştığı yarıçap (kart birimi)
+  const WAVE_LIFE = 18;     // dalganın sönme süresi (sn) — çok yavaş açılır
+  const WAVE_REACH = 72;    // dalganın ulaştığı yarıçap (kart birimi)
+  const WAVE_FLAT = 0.3;    // ekvator düzleminin basıklığı: dalga, eksene dik bir disk gibi yatık görünür
 
   let W = 0, H = 0, k = 1;
   let cy = "#9fd6e4", cyRgb = "159,214,228";
@@ -44,12 +45,23 @@
     x.setTransform(dpr * k, 0, 0, dpr * k, dpr * (cx - C * k), dpr * (cyy - C * k));
   }
 
-  // çekirdekten dışa yayılan hafif dalga: ince, düzgün bir daire
+  // 3B dalga: dönme eksenine dik ekvator düzleminde yayılan halka. Düzlem bize doğru eğik
+  // durduğu için basık bir elips olarak görünür; ön yarısı (alt) parlak, arka yarısı (üst) soluk.
+  // Her dalga birbirini izleyen üç ince halkadan oluşan bir dalga paketi: önde belirgin, arkada sönen.
   function wave(r, alpha) {
     if (alpha < 0.004) return;
-    x.strokeStyle = `rgba(${cyRgb},${alpha})`;
-    x.lineWidth = 1.2 / k;
-    x.beginPath(); x.arc(C, C, r, 0, TAU); x.stroke();
+    x.save();
+    x.translate(C, C); x.rotate(TILT);
+    x.lineWidth = 1.4 / k;
+    [[0, 1], [-3.2, 0.5], [-6.4, 0.22]].forEach(([dr, f]) => {
+      const rr = r + dr;
+      if (rr <= 2) return;
+      x.strokeStyle = `rgba(${cyRgb},${alpha * f * 0.4})`;
+      x.beginPath(); x.ellipse(0, 0, rr, rr * WAVE_FLAT, 0, Math.PI, TAU); x.stroke();   // arka yarı
+      x.strokeStyle = `rgba(${cyRgb},${alpha * f})`;
+      x.beginPath(); x.ellipse(0, 0, rr, rr * WAVE_FLAT, 0, 0, Math.PI); x.stroke();      // ön yarı
+    });
+    x.restore();
   }
 
   // ince ışın: dar parlak öz + biraz daha geniş yumuşak hale, uca doğru yavaşça söner
@@ -63,8 +75,8 @@
       x.fillStyle = g;
       x.beginPath(); x.moveTo(C, C); x.arc(C, C, len, ang - wd, ang + wd); x.closePath(); x.fill();
     };
-    cone(0.016, alpha * 0.14);   // dar hale
-    cone(0.005, alpha * 0.8);    // ince öz
+    cone(0.026, alpha * 0.16);   // dar hale
+    cone(0.009, alpha * 0.8);    // öz
   }
 
   function draw(t) {
@@ -77,16 +89,16 @@
         if (n < 0) break;
         const u = (t - n * WAVE_EVERY) / WAVE_LIFE;
         if (u < 0 || u >= 1) continue;
-        const r = 10 + (1 - Math.pow(1 - u, 1.8)) * WAVE_REACH;
-        const a = 0.12 * Math.pow(1 - u, 1.5) * Math.min(1, u * 4);
+        const r = 8 + (1 - Math.pow(1 - u, 1.6)) * WAVE_REACH;
+        const a = 0.32 * Math.pow(1 - u, 1.4) * Math.min(1, u * 5);
         wave(r, a);
       }
     }
 
     // hâle: yıldızın çevresinde geniş, yumuşak ışıma
-    let g = x.createRadialGradient(C, C, 0, C, C, 30);
+    let g = x.createRadialGradient(C, C, 0, C, C, 22);
     g.addColorStop(0, `rgba(${cyRgb},.22)`); g.addColorStop(0.35, `rgba(${cyRgb},.06)`); g.addColorStop(1, `rgba(${cyRgb},0)`);
-    x.fillStyle = g; x.beginPath(); x.arc(C, C, 30, 0, TAU); x.fill();
+    x.fillStyle = g; x.beginPath(); x.arc(C, C, 22, 0, TAU); x.fill();
 
     // ışınlar: sağa yatık eksen etrafında dar koni çizer (3B izdüşüm)
     const ph = (reduce ? 0.6 : t) * SPEED;
@@ -101,10 +113,10 @@
     }
 
     // çekirdek: parlak, yuvarlak küre (beyaz göbek, belirgin kenar, dışa yumuşak geçiş)
-    g = x.createRadialGradient(C, C, 0, C, C, 10);
+    g = x.createRadialGradient(C, C, 0, C, C, 6.5);
     g.addColorStop(0, "#fff"); g.addColorStop(0.32, "#fff"); g.addColorStop(0.5, `rgba(${cyRgb},.9)`);
     g.addColorStop(0.62, `rgba(${cyRgb},.35)`); g.addColorStop(1, `rgba(${cyRgb},0)`);
-    x.fillStyle = g; x.beginPath(); x.arc(C, C, 10, 0, TAU); x.fill();
+    x.fillStyle = g; x.beginPath(); x.arc(C, C, 6.5, 0, TAU); x.fill();
   }
 
   function render(t) {
