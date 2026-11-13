@@ -1,25 +1,26 @@
-// Arka plan süsü: ekranın sağında, çok soluk dönen bir pulsar.
-// Manyetik ekseni dönme ekseninden eğik bir nötron yıldızı: iki ışın konisi döner, ışın bakana
-// döndüğünde çekirdek parlar ve dışa doğru silik bir halka yayılır. Dipol alan çizgileri eksenle birlikte döner.
-// Renkler temadan (--cyan, --accent) okunur; gece/gündüz değişince yenilenir.
+// Arka plan süsü: ekranın sağında, çok soluk bir pulsar.
+// Hâleli parlak bir nötron yıldızı ve iki ince, uzun ışın. Işınlar sağa yatık bir eksenin
+// etrafında dar bir koni çizerek yavaşça salınır (presesyon). Etrafta çekirdekten
+// dışa doğru hafif, soluk dalgalar yayılır. Parlama ya da atım yok; sakin bir süs.
+// Çizim 128 birimlik bir kare içinde yapılır ve ekranın sağına büyütülerek yerleştirilir.
+// Renkler temadan (--cyan) okunur; gece/gündüz değişince yenilenir.
 (function () {
   const cv = document.getElementById("pulsar");
   if (!cv || !cv.getContext) return;
   const x = cv.getContext("2d");
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const TAU = Math.PI * 2;
+  const TAU = Math.PI * 2, C = 64;
 
-  const PERIOD = 7000;          // bir tam dönüş (ms) — süs olduğu için yavaş
-  const INCL = 0.62;            // manyetik eksenin dönme ekseninden eğikliği (rad)
-  const TILT = 0.38;            // dönme ekseninin bakana doğru eğikliği
-  const ROLL = -0.22;           // ekranda hafif yana yatma
-  const SHELLS = [0.34, 0.58, 0.86];
-  const AZ = 6;
+  const TILT = 0.2;         // dönme ekseninin sağa yatıklığı (rad, üst uç sağa)
+  const CONE = 0.14;        // ışının eksen etrafında çizdiği koninin yarı açısı (dar)
+  const SPEED = 0.22;       // salınım hızı (rad/sn) — bir tur ~28 sn, sakin
+  const BEAM_LEN = 120;     // ışın uzunluğu (kart birimi), ekran kenarına kadar uzanır
+  const WAVE_EVERY = 7;     // yeni dalga aralığı (sn)
+  const WAVE_LIFE = 14;     // dalganın sönme süresi (sn) — yavaş açılır
+  const WAVE_REACH = 60;    // dalganın ulaştığı yarıçap (kart birimi)
 
-  let W = 0, H = 0, cx = 0, cy = 0, R = 0, light = false;
-  let C = "159,214,228", A = "255,181,71";
-  const rings = [];
-  const prevPulse = [0, 0];
+  let W = 0, H = 0, k = 1;
+  let cy = "#9fd6e4", cyRgb = "159,214,228";
 
   function rgb(v) {
     let h = (v || "").trim().replace("#", "");
@@ -29,114 +30,98 @@
   }
   function readTheme() {
     const s = getComputedStyle(document.documentElement);
-    C = rgb(s.getPropertyValue("--cyan")) || C;
-    A = rgb(s.getPropertyValue("--accent")) || A;
-    light = document.documentElement.dataset.mode === "light";
+    cy = s.getPropertyValue("--cyan").trim() || cy;
+    cyRgb = rgb(cy) || cyRgb;
   }
   function size() {
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     W = innerWidth; H = innerHeight;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    x.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (W < 700) { R = Math.min(W * 0.62, H * 0.32); cx = W - R * 0.28; cy = H * 0.74; }
-    else { R = Math.min(H * 0.44, W * 0.36); cx = W - R * 0.62; cy = H * 0.47; }
+    const side = W < 700 ? Math.min(W * 1.1, H * 0.6) : Math.min(H * 1.05, W * 0.62);
+    k = side / 128;
+    const cx = W < 700 ? W - side * 0.2 : W - side * 0.3;
+    const cyy = W < 700 ? H * 0.74 : H * 0.47;
+    x.setTransform(dpr * k, 0, 0, dpr * k, dpr * (cx - C * k), dpr * (cyy - C * k));
   }
 
-  // dönme çerçevesinden ekrana: önce bakana doğru eğ (x ekseni), sonra ekranda yatır (z ekseni)
-  function toScreen(v) {
-    const ct = Math.cos(TILT), st = Math.sin(TILT);
-    const y1 = v[1] * ct - v[2] * st, z1 = v[1] * st + v[2] * ct;
-    const cr = Math.cos(ROLL), sr = Math.sin(ROLL);
-    return [v[0] * cr - y1 * sr, v[0] * sr + y1 * cr, z1];   // [sağ, yukarı, bakana]
+  // çekirdekten dışa yayılan hafif dalga: ince, düzgün bir daire
+  function wave(r, alpha) {
+    if (alpha < 0.004) return;
+    x.strokeStyle = `rgba(${cyRgb},${alpha})`;
+    x.lineWidth = 1.2 / k;
+    x.beginPath(); x.arc(C, C, r, 0, TAU); x.stroke();
   }
-  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-  const norm = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 
-  function frame(now) {
-    const phi = (now % PERIOD) / PERIOD * TAU;
-    const m = toScreen([Math.sin(INCL) * Math.cos(phi), Math.cos(INCL), Math.sin(INCL) * Math.sin(phi)]);
-    x.clearRect(0, 0, W, H);
-    x.globalCompositeOperation = light ? "source-over" : "lighter";
+  // ince ışın: dar parlak öz + biraz daha geniş yumuşak hale, uca doğru yavaşça söner
+  function beam(ang, len, alpha) {
+    const cone = (wd, a) => {
+      const ex = C + Math.cos(ang) * len, ey = C + Math.sin(ang) * len;
+      const g = x.createLinearGradient(C, C, ex, ey);
+      g.addColorStop(0, `rgba(${cyRgb},${a})`);
+      g.addColorStop(0.5, `rgba(${cyRgb},${a * 0.55})`);
+      g.addColorStop(1, `rgba(${cyRgb},0)`);
+      x.fillStyle = g;
+      x.beginPath(); x.moveTo(C, C); x.arc(C, C, len, ang - wd, ang + wd); x.closePath(); x.fill();
+    };
+    cone(0.016, alpha * 0.14);   // dar hale
+    cone(0.005, alpha * 0.8);    // ince öz
+  }
 
-    // zemin ışıması
-    let g = x.createRadialGradient(cx, cy, 0, cx, cy, R * 1.1);
-    g.addColorStop(0, `rgba(${C},.10)`); g.addColorStop(1, `rgba(${C},0)`);
-    x.fillStyle = g; x.fillRect(cx - R * 1.2, cy - R * 1.2, R * 2.4, R * 2.4);
-
-    // dipol alan çizgileri: r = L·sin²θ, manyetik eksen etrafında AZ farklı düzlemde
-    const a = norm(Math.abs(m[2]) > 0.95 ? cross(m, [1, 0, 0]) : cross(m, [0, 0, 1]));
-    const b = cross(m, a);
-    x.lineWidth = 1;
-    for (let k = 0; k < AZ; k++) {
-      const ang = k / AZ * Math.PI;              // yarım tur yeter: θ 0..π her iki yanı çizer
-      const e = [a[0] * Math.cos(ang) + b[0] * Math.sin(ang), a[1] * Math.cos(ang) + b[1] * Math.sin(ang), a[2] * Math.cos(ang) + b[2] * Math.sin(ang)];
-      for (const L of SHELLS) {
-        for (const side of [1, -1]) {
-          x.beginPath(); let depth = 0;
-          for (let i = 0; i <= 36; i++) {
-            const th = 0.12 + (Math.PI - 0.24) * i / 36, s = Math.sin(th), r = L * R * s * s;
-            const px = r * (Math.cos(th) * m[0] + side * s * e[0]);
-            const py = r * (Math.cos(th) * m[1] + side * s * e[1]);
-            depth += Math.cos(th) * m[2] + side * s * e[2];
-            i ? x.lineTo(cx + px, cy - py) : x.moveTo(cx + px, cy - py);
-          }
-          const front = depth / 37 > 0;
-          x.strokeStyle = `rgba(${C},${front ? 0.32 : 0.14})`;
-          x.stroke();
-        }
+  function draw(t) {
+    // dalgalar: en arkada
+    if (reduce) {
+      wave(30, 0.16); wave(55, 0.08);
+    } else {
+      const newest = Math.floor(t / WAVE_EVERY);
+      for (let n = newest; n > newest - Math.ceil(WAVE_LIFE / WAVE_EVERY) - 1; n--) {
+        if (n < 0) break;
+        const u = (t - n * WAVE_EVERY) / WAVE_LIFE;
+        if (u < 0 || u >= 1) continue;
+        const r = 10 + (1 - Math.pow(1 - u, 1.8)) * WAVE_REACH;
+        const a = 0.12 * Math.pow(1 - u, 1.5) * Math.min(1, u * 4);
+        wave(r, a);
       }
     }
 
-    // ışın konileri ve atım
-    let pulse = 0;
-    for (let i = 0; i < 2; i++) {
-      const s = i ? -1 : 1, dx = s * m[0], dy = -s * m[1], dz = s * m[2];
-      const p = Math.pow(Math.max(0, dz), 10);
-      pulse = Math.max(pulse, p);
-      if (p > 0.55 && prevPulse[i] <= 0.55 && !reduce) rings.push(now);
-      prevPulse[i] = p;
-      const L = Math.hypot(dx, dy), len = R * 1.7 * Math.max(0.12, L);
-      const ux = L ? dx / L : 0, uy = L ? dy / L : 1, wx = -uy, wy = ux;
-      const half = R * (0.1 + 0.28 * (1 - L));       // bakana dönünce koni genişler
-      const tipX = cx + ux * len, tipY = cy + uy * len;
-      const al = 0.32 + 0.4 * Math.max(0, dz);
-      g = x.createLinearGradient(cx, cy, tipX, tipY);
-      g.addColorStop(0, `rgba(${C},${al})`); g.addColorStop(0.55, `rgba(${C},${al * 0.3})`); g.addColorStop(1, `rgba(${C},0)`);
-      x.fillStyle = g;
-      x.beginPath(); x.moveTo(cx, cy);
-      x.lineTo(tipX + wx * half, tipY + wy * half);
-      x.quadraticCurveTo(tipX + ux * half * 0.35, tipY + uy * half * 0.35, tipX - wx * half, tipY - wy * half);
-      x.closePath(); x.fill();
+    // hâle: yıldızın çevresinde geniş, yumuşak ışıma
+    let g = x.createRadialGradient(C, C, 0, C, C, 30);
+    g.addColorStop(0, `rgba(${cyRgb},.22)`); g.addColorStop(0.35, `rgba(${cyRgb},.06)`); g.addColorStop(1, `rgba(${cyRgb},0)`);
+    x.fillStyle = g; x.beginPath(); x.arc(C, C, 30, 0, TAU); x.fill();
+
+    // ışınlar: sağa yatık eksen etrafında dar koni çizer (3B izdüşüm)
+    const ph = (reduce ? 0.6 : t) * SPEED;
+    const ax = [Math.sin(TILT), -Math.cos(TILT), 0];          // eksen (ekranda yukarı, sağa yatık)
+    const px = [Math.cos(TILT), Math.sin(TILT), 0];           // ekranda eksene dik
+    const cc = Math.cos(CONE), sc = Math.sin(CONE), cp = Math.cos(ph), sp = Math.sin(ph);
+    const b = [cc * ax[0] + sc * cp * px[0], cc * ax[1] + sc * cp * px[1], sc * sp];
+    for (const s of [1, -1]) {
+      const bx = s * b[0], by = s * b[1], bz = s * b[2];
+      const L = Math.hypot(bx, by);
+      beam(Math.atan2(by, bx), BEAM_LEN * L, 0.85 + 0.06 * bz);   // bakana dönen ışın hafifçe parlak
     }
 
-    // atım halkaları
-    for (let i = rings.length - 1; i >= 0; i--) {
-      const u = (now - rings[i]) / 3200;
-      if (u >= 1) { rings.splice(i, 1); continue; }
-      x.strokeStyle = `rgba(${C},${0.35 * (1 - u) * (1 - u)})`;
-      x.lineWidth = 1 + 2 * (1 - u);
-      x.beginPath(); x.arc(cx, cy, R * (0.08 + 1.3 * u), 0, TAU); x.stroke();
-    }
-
-    // çekirdek: atım anında parlar, kehribar iç ışık
-    const cr = R * (0.035 + 0.05 * pulse);
-    g = x.createRadialGradient(cx, cy, 0, cx, cy, cr * 4);
-    g.addColorStop(0, `rgba(${light ? A : "255,255,255"},${0.75 + 0.25 * pulse})`);
-    g.addColorStop(0.25, `rgba(${C},${0.45 + 0.4 * pulse})`);
-    g.addColorStop(1, `rgba(${C},0)`);
-    x.fillStyle = g; x.beginPath(); x.arc(cx, cy, cr * 4, 0, TAU); x.fill();
-    x.globalCompositeOperation = "source-over";
+    // çekirdek: parlak, yuvarlak küre (beyaz göbek, belirgin kenar, dışa yumuşak geçiş)
+    g = x.createRadialGradient(C, C, 0, C, C, 10);
+    g.addColorStop(0, "#fff"); g.addColorStop(0.32, "#fff"); g.addColorStop(0.5, `rgba(${cyRgb},.9)`);
+    g.addColorStop(0.62, `rgba(${cyRgb},.35)`); g.addColorStop(1, `rgba(${cyRgb},0)`);
+    x.fillStyle = g; x.beginPath(); x.arc(C, C, 10, 0, TAU); x.fill();
   }
 
-  let last = 0, raf = 0;
+  function render(t) {
+    x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, cv.width, cv.height); x.restore();
+    draw(t);
+  }
+
+  let last = 0;
+  const t0 = performance.now();
   function loop(now) {
-    raf = requestAnimationFrame(loop);
+    requestAnimationFrame(loop);
     if (now - last < 33) return;   // ~30 fps yeter
-    last = now; frame(now);
+    last = now; render((now - t0) / 1000);
   }
 
   readTheme(); size();
-  if (reduce) frame(PERIOD * 0.15); else raf = requestAnimationFrame(loop);
-  addEventListener("resize", () => { size(); if (reduce) frame(PERIOD * 0.15); });
-  document.addEventListener("modechange", () => { readTheme(); if (reduce) frame(PERIOD * 0.15); });
+  if (reduce) render(0); else requestAnimationFrame(loop);
+  addEventListener("resize", () => { size(); if (reduce) render(0); });
+  document.addEventListener("modechange", () => { readTheme(); if (reduce) render(0); });
 })();
