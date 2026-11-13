@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>baqikk — Uzay ve mühendislik araçları</title>
+<meta name="description" content="Uzay ve mühendislik odaklı küçük tarayıcı projeleri ve araçları: yörünge simülatörü, video → GIF dönüştürücü ve daha fazlası.">
+<meta name="theme-color" content="#05080b">
+<link rel="canonical" href="https://baqikk.github.io/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
+<meta property="og:type" content="website">
+<meta property="og:locale" content="tr_TR">
+<meta property="og:site_name" content="baqikk">
+<meta property="og:title" content="baqikk — Uzay ve mühendislik araçları">
+<meta property="og:description" content="Uzay ve mühendislik odaklı küçük tarayıcı projeleri ve araçları.">
+<meta property="og:url" content="https://baqikk.github.io/">
+<meta name="twitter:card" content="summary">
+
+<script>(function(){var m;try{m=JSON.parse(localStorage.getItem("ka_mode"))}catch(e){}if(m!=="light"&&m!=="dark")m=window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.dataset.mode=m})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/tema.css">
+<link rel="stylesheet" href="/style.css">
+<script src="/projects.js" defer></script>
+<script src="/tema.js" defer></script>
+</head>
+<body>
+<header class="shell bar" data-fx-blur>
+  <div class="brand">
+    <svg class="brand-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 2.5c.6 6 3.5 8.9 9.5 9.5-6 .6-8.9 3.5-9.5 9.5-.6-6-3.5-8.9-9.5-9.5 6-.6 8.9-3.5 9.5-9.5Z" stroke-linejoin="round"/></svg>
+    <div>
+      <h1 lang="en">baqikk</h1>
+      <p>Uzay ve mühendislik · tarayıcıda çalışan küçük işler</p>
+    </div>
+  </div>
+  <div class="modew"><span class="mode-l" id="modeLabel"></span><button class="mode" id="modeBtn" type="button"></button></div>
+</header>
+
+<main class="shell" data-fx-blur>
+  <section class="win" aria-labelledby="h-projeler">
+    <div class="win-h"><h2 id="h-projeler">Projeler</h2><span class="count" id="n-projeler"></span></div>
+    <div class="win-b"><ul class="grid" id="projeler"></ul></div>
+  </section>
+
+  <section class="win" id="araclar" aria-labelledby="h-araclar">
+    <div class="win-h"><h2 id="h-araclar">Araçlar</h2><span class="count" id="n-araclar"></span></div>
+    <div class="win-b"><ul class="grid" id="araclar-liste"></ul></div>
+  </section>
+
+  <noscript>
+    <section class="win"><div class="win-b"><ul class="grid">
+      <li><a class="card" href="https://baqikk.github.io/orbital-simulator"><h3>Yörünge Simülatörü</h3></a></li>
+      <li><a class="card" href="https://baqikk.github.io/kelime-avcisi"><h3>Kelime Avcısı</h3></a></li>
+      <li><a class="card" href="/araclar/video-to-gif/"><h3>Video → GIF ve Çözünürlük Yükseltme</h3></a></li>
+    </ul></div></section>
+  </noscript>
+</main>
+
+<footer class="shell sig">
+  <a href="https://github.com/baqikk" lang="en">baqikk</a> · <span id="yil">2026</span>
+</footer>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  function ciz(liste, kutuId, sayacId) {
+    var kutu = document.getElementById(kutuId);
+    liste.forEach(function (p, i) {
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      a.className = "card";
+      a.href = p.url;
+
+      var ust = document.createElement("div");
+      ust.className = "card-top";
+      var etiket = document.createElement("span");
+      etiket.className = "card-tag";
+      etiket.textContent = p.etiket;
+      var no = document.createElement("span");
+      no.className = "card-no";
+      no.textContent = String(i + 1).padStart(2, "0");
+      ust.append(etiket, no);
+
+      var baslik = document.createElement("h3");
+      baslik.textContent = p.ad;
+      var aciklama = document.createElement("p");
+      aciklama.textContent = p.aciklama;
+      var git = document.createElement("span");
+      git.className = "card-go";
+      git.textContent = "Aç →";
+
+      a.append(ust, baslik, aciklama, git);
+      li.appendChild(a);
+      kutu.appendChild(li);
+    });
+    document.getElementById(sayacId).textContent = String(liste.length).padStart(2, "0");
+  }
+  ciz(window.PROJELER || [], "projeler", "n-projeler");
+  ciz(window.ARACLAR || [], "araclar-liste", "n-araclar");
+  document.getElementById("yil").textContent = new Date().getFullYear();
+});
+</script>
+</body>
+</html>

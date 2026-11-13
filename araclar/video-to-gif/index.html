@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Video → GIF</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05080b">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>(function(){var m;try{m=JSON.parse(localStorage.getItem("ka_mode"))}catch(e){}if(m!=="light"&&m!=="dark")m=window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.dataset.mode=m})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/tema.css">
+<style>
+  /* Renkler ve yazı tipleri /tema.css'ten gelir (gece/gündüz). Burada yalnızca aracın yerleşimi var. */
+  body { padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); }
+  .wrap { max-width:860px; margin:0 auto; padding:14px 0 48px; }
+  h1 { font:700 17px/1 var(--f-disp); letter-spacing:.16em; text-transform:uppercase; margin:0 0 16px; }
+  .card { position:relative; background:var(--panel); border:1px solid var(--line2); box-shadow:var(--shadow); padding:14px; margin-bottom:14px; }
+  .card::before, .card::after { content:""; position:absolute; width:7px; height:7px; pointer-events:none; }
+  .card::before { left:-1px; top:-1px; border-left:1px solid var(--accent); border-top:1px solid var(--accent); }
+  .card::after { right:-1px; bottom:-1px; border-right:1px solid var(--line3); border-bottom:1px solid var(--line3); }
+  #drop, #uDrop { border:1px dashed var(--line2); background:var(--well); text-align:center; padding:34px 10px; cursor:pointer; color:var(--dim); transition:border-color .12s,color .12s; }
+  #drop small, #uDrop small { font-family:var(--f-mono); font-size:11.5px; color:var(--faint); }
+  #drop:hover, #uDrop:hover { border-color:var(--line3); }
+  #drop.over, #uDrop.over { border-color:var(--cyan); color:var(--ink); }
+  #editor { position:relative; }
+  #vid { position:absolute; width:2px; height:2px; opacity:0; pointer-events:none; }
+  #stageWrap { margin-top:10px; }
+  #stage { display:block; margin:0 auto; max-width:100%; background:#000; border:1px solid var(--line); touch-action:none; }
+  .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+  .toolbar .lbl { width:58px; font:500 10px/1.1 var(--f-disp); letter-spacing:.14em; text-transform:uppercase; color:var(--faint); }
+  .seg { display:inline-flex; border:1px solid var(--line2); overflow:hidden; }
+  .seg button { background:var(--raise); color:var(--dim); border:0; border-right:1px solid var(--line2); font:600 10.5px/1 var(--f-disp); letter-spacing:.1em; text-transform:uppercase; padding:8px 11px; }
+  .seg button:hover { background:var(--raise2); color:var(--ink); filter:none; }
+  .seg button:last-child { border-right:0; }
+  .seg button.on { background:var(--raise2); color:var(--cyan); box-shadow:inset 0 -2px 0 var(--cyan); }
+  .hint { color:var(--dim); font-size:12.5px; }
+  .player { display:flex; gap:10px; align-items:center; margin-top:10px; }
+  .player button { width:40px; padding:7px 0; }
+  .player .t { color:var(--dim); font:400 12px/1 var(--f-mono); min-width:62px; text-align:right; }
+  input[type=color] { width:34px; height:26px; padding:0; border:1px solid var(--line2); background:none; vertical-align:middle; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:12px; }
+  .row label { color:var(--dim); font-size:13px; }
+  input[type=number], select { background:var(--field); color:var(--ink); border:1px solid var(--line2); border-radius:0; padding:6px 8px; font:400 12.5px/1.45 var(--f-mono); }
+  input[type=number] { width:84px; }
+  input[type=number]:hover, select:hover { border-color:var(--line3); }
+  input[type=range] { flex:1; min-width:180px; accent-color:var(--cyan); }
+  button { background:var(--accent); color:var(--accent-ink); border:1px solid var(--accent); border-radius:0; padding:8px 14px; font:600 11px/1 var(--f-disp); letter-spacing:.12em; text-transform:uppercase; cursor:pointer; transition:background-color .12s,border-color .12s,color .12s; }
+  button:hover { filter:brightness(1.08); }
+  button.sec { background:var(--raise); color:var(--ink); border-color:var(--line2); }
+  button.sec:hover { background:var(--raise2); border-color:var(--line3); filter:none; }
+  button:disabled { opacity:.5; cursor:default; filter:none; }
+  .trim { display:grid; grid-template-columns:70px 1fr auto auto; gap:8px; align-items:center; margin-top:10px; }
+  .info { color:var(--dim); font-size:13px; margin-top:10px; }
+  .info b, #uOut b { font-family:var(--f-disp); letter-spacing:.06em; text-transform:uppercase; color:var(--cyan); }
+  .warn { color:var(--warn); }
+  progress { width:100%; height:8px; margin-top:12px; accent-color:var(--cyan); }
+  #out img { max-width:100%; background:#000; display:block; margin-top:10px; border:1px solid var(--line); }
+  a.dl { display:inline-block; margin-top:10px; background:var(--accent); color:var(--accent-ink); padding:9px 14px; text-decoration:none; font:600 11px/1 var(--f-disp); letter-spacing:.12em; text-transform:uppercase; }
+  a.dl:hover { filter:brightness(1.08); }
+  .hide { display:none; }
+  .foot { text-align:center; margin-top:32px; padding-top:16px; border-top:1px solid var(--line); font-size:12px; color:var(--faint); }
+  .foot a { color:inherit; text-decoration:none; transition:color .2s; }
+  .foot a:hover { color:var(--cyan); }
+  .foot .brand { font:600 11px/1 var(--f-disp); letter-spacing:.16em; text-transform:uppercase; color:var(--dim); }
+  .foot .brand::before { content:"✦ "; color:var(--accent); }
+  .foot .brand:hover { color:var(--cyan); }
+  .foot .sub { margin-top:6px; }
+  .topbar { display:flex; align-items:flex-end; gap:12px; margin-bottom:16px; border-bottom:1px solid var(--line2); }
+  .tabs { display:flex; gap:4px; flex:1; min-width:0; flex-wrap:wrap; }
+  .topbar .modew { margin-bottom:8px; }
+  .tabs .tab { background:none; color:var(--dim); border:0; border-bottom:2px solid transparent; padding:12px 14px; font:600 12px/1 var(--f-disp); letter-spacing:.14em; text-transform:uppercase; margin-bottom:-1px; }
+  .tabs .tab:hover { color:var(--ink); filter:none; }
+  .tabs .tab.on { color:var(--cyan); border-bottom-color:var(--accent); }
+  .cmp { position:relative; display:inline-block; max-width:100%; margin-top:10px; line-height:0; cursor:pointer; user-select:none; }
+  .cmp img { max-width:100%; display:block; background:#000; margin:0; border:1px solid var(--line); }
+  .cmp img.orig { position:absolute; inset:0; width:100%; height:100%; opacity:0; }
+  .cmp.hold img.orig { opacity:1; }
+  .presets { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:8px; margin-top:6px; }
+  .pre { background:var(--raise); color:var(--ink); border:1px solid var(--line); padding:9px 10px; text-align:left; font:600 11.5px/1.3 var(--f-disp); letter-spacing:.06em; text-transform:none; }
+  .pre small { display:block; color:var(--dim); font:400 12px/1.35 var(--f-body); letter-spacing:0; margin-top:3px; }
+  .pre:hover { border-color:var(--line3); background:var(--raise2); filter:none; }
+  .pre.on { border-color:var(--cyan); box-shadow:0 0 0 1px var(--cyan) inset; background:var(--raise2); }
+  .sec-title { font:600 10.5px/1 var(--f-disp); letter-spacing:.2em; text-transform:uppercase; color:var(--cyan); margin-top:16px; }
+  /* arka plan pulsarı: çok soluk süs, içeriğin arkasında */
+  #pulsar { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; opacity:.2; }
+  :root[data-mode="light"] #pulsar { opacity:.16; }
+  @media (max-width:700px) { #pulsar { opacity:.14; } :root[data-mode="light"] #pulsar { opacity:.11; } }
+  .wrap { position:relative; z-index:1; }
+  @media (max-width:520px) { .tabs .tab { padding:12px 8px; font-size:11px; letter-spacing:.08em; } }
+</style>
+</head>
+<body>
+<canvas id="pulsar" aria-hidden="true"></canvas>
+<div class="wrap" data-fx-blur>
+  <div class="topbar">
+    <div class="tabs">
+      <button class="tab on" data-tab="gif">Video → GIF</button>
+      <button class="tab" data-tab="up">Çözünürlük Yükseltme</button>
+    </div>
+    <div class="modew"><span class="mode-l" id="modeLabel"></span><button class="mode" id="modeBtn" type="button"></button></div>
+  </div>
+
+  <div id="tab-gif">
+
+  <div class="card">
+    <div id="drop">Videoyu buraya sürükle ya da tıklayıp seç<br><small>(mp4, webm, mov, m4v — tarayıcının oynatabildiği formatlar)</small></div>
+    <input id="file" type="file" accept="video/*" class="hide">
+  </div>
+
+  <div id="editor" class="card hide">
+    <div class="toolbar">
+      <span class="lbl">Kırpma</span>
+      <div class="seg" id="modeSeg">
+        <button data-mode="none" class="on">Yok</button>
+        <button data-mode="rect">Dikdörtgen</button>
+        <button data-mode="quad">Manuel (eğik)</button>
+      </div>
+      <button class="sec" id="cropReset">Kırpmayı sıfırla</button>
+    </div>
+    <div class="toolbar">
+      <span class="lbl">Döndür</span>
+      <div class="seg" id="rotSeg">
+        <button data-rot="0" class="on">0°</button><button data-rot="30">30°</button><button data-rot="45">45°</button><button data-rot="60">60°</button><button data-rot="70">70°</button><button data-rot="90">90°</button>
+      </div>
+      <input id="rot" type="number" min="-180" max="180" step="1" value="0">°
+      <span class="hint">saat yönünde, negatif = ters yön</span>
+      <label class="hint">Boşluk rengi <input id="fill" type="color" value="#000000"></label>
+    </div>
+    <div class="hint" id="modeHint"></div>
+
+    <div id="stageWrap"><canvas id="stage"></canvas></div>
+    <video id="vid" muted playsinline preload="auto"></video>
+    <div class="player">
+      <button class="sec" id="play">▶</button>
+      <input id="pos" type="range" min="0" max="1" step="0.01" value="0">
+      <span class="t" id="tcur">0:00.00</span>
+    </div>
+
+    <div class="trim">
+      <label>Başlangıç</label>
+      <input id="sRange" type="range" min="0" max="1" step="0.01" value="0">
+      <input id="sNum" type="number" min="0" step="0.1" value="0">
+      <button class="sec" id="sNow">Şu an ▸ başlangıç</button>
+    </div>
+    <div class="trim">
+      <label>Bitiş</label>
+      <input id="eRange" type="range" min="0" max="1" step="0.01" value="1">
+      <input id="eNum" type="number" min="0" step="0.1" value="1">
+      <button class="sec" id="eNow">Şu an ▸ bitiş</button>
+    </div>
+    <div class="info" id="sel"></div>
+
+    <div class="row">
+      <label>Genişlik (px) <input id="w" type="number" min="16" max="1920" step="10" value="480"></label>
+      <label>FPS <input id="fps" type="number" min="1" max="30" step="1" value="12"></label>
+      <label><input id="loop" type="checkbox" checked> Sürekli döngü</label>
+      <button id="go">GIF oluştur</button>
+    </div>
+    <div class="info" id="est"></div>
+    <progress id="prog" value="0" max="1" class="hide"></progress>
+    <div class="info" id="status"></div>
+  </div>
+
+  <div id="out" class="card hide"></div>
+  </div>
+
+  <div id="tab-up" class="hide">
+    <div class="card">
+      <div id="uDrop">Resmi buraya sürükle ya da tıklayıp seç<br><small>(png, jpg, webp, bmp — gif’te ilk kare alınır)</small></div>
+      <input id="uFile" type="file" accept="image/*" class="hide">
+    </div>
+    <div id="uPanel" class="card hide">
+      <div class="info" id="uSrcInfo" style="margin-top:0"></div>
+      <div class="sec-title">Önerilen ayarlar</div>
+      <div class="hint">Resim türüne göre başlangıç noktası. Seçtikten sonra aşağıdan elle değiştirebilirsin.</div>
+      <div class="presets" id="uPresets">
+        <button class="pre" data-p="photo">İyi kaliteli fotoğraf<small>2× · hafif keskinlik</small></button>
+        <button class="pre" data-p="jpglow">Sıkıştırılmış / eski JPG<small>2× · bozulmayı yumuşatır</small></button>
+        <button class="pre" data-p="small">Küçük / düşük çözünürlüklü<small>3× · temkinli keskinlik</small></button>
+        <button class="pre" data-p="graphic">Ekran görüntüsü / çizim<small>2× · net kenarlar</small></button>
+        <button class="pre" data-p="pixel">Piksel sanatı<small>4× · yumuşatmasız</small></button>
+      </div>
+      <div class="hint" id="uSuggest" style="margin-top:8px"></div>
+      <div class="sec-title" style="margin-bottom:8px">Ayarlar</div>
+      <div class="toolbar">
+        <span class="lbl">Ölçek</span>
+        <div class="seg" id="uScaleSeg"><button data-s="1.5">1.5×</button><button data-s="2" class="on">2×</button><button data-s="3">3×</button><button data-s="4">4×</button></div>
+        <input id="uScale" type="number" min="1" max="8" step="0.1" value="2">×
+      </div>
+      <div class="toolbar">
+        <span class="lbl">Keskinlik</span>
+        <input id="uSharp" type="range" min="0" max="150" step="5" value="50" style="max-width:260px"><span class="hint" id="uSharpV">50%</span>
+      </div>
+      <div class="toolbar">
+        <span class="lbl">Gürültü</span>
+        <input id="uDenoise" type="range" min="0" max="100" step="5" value="0" style="max-width:260px"><span class="hint" id="uDenoiseV">0%</span>
+        <span class="hint">grenli / bloklu (JPG) resimlerde yükselt</span>
+      </div>
+      <div class="toolbar">
+        <span class="lbl">Biçim</span>
+        <select id="uFmt"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option></select>
+        <label class="hint"><input id="uNearest" type="checkbox"> Piksel sanatı modu (yumuşatmasız, keskin kenar)</label>
+      </div>
+      <div class="row"><button id="uGo">Yükselt</button><span class="hint" id="uEst"></span></div>
+      <progress id="uProg" value="0" max="1" class="hide"></progress>
+      <div class="info" id="uStatus"></div>
+    </div>
+    <div id="uOut" class="card hide"></div>
+  </div>
+
+  <div class="foot">
+    <a class="brand" lang="en" href="https://baqikk.github.io" target="_blank" rel="noopener">baqikk.github.io</a>
+    <div class="sub">uzay ve mühendislik odaklı küçük araçlar ·
+      <a href="https://baqikk.github.io/orbital-simulator" target="_blank" rel="noopener">Yörünge Simülatörü</a> ·
+      <a href="https://baqikk.github.io/kelime-avcisi" target="_blank" rel="noopener">Kelime Avcısı</a> ·
+      <a href="https://baqikk.github.io" target="_blank" rel="noopener">hepsi →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+//--CORE-START
+// 15-bit (5-5-5) renk histogramından median-cut ile en fazla 255 renklik palet çıkarır.
+function buildPalette(frames) {
+  const hist = new Uint32Array(32768);
+  for (const f of frames) for (let i = 0; i < f.length; i++) hist[f[i]]++;
+  let bins = [];
+  for (let c = 0; c < 32768; c++) if (hist[c]) bins.push(c);
+  const R = c => (c >> 10) & 31, G = c => (c >> 5) & 31, B = c => c & 31;
+  const MAXC = 255;
+  let boxes = [bins];
+  while (boxes.length < MAXC) {
+    let bi = -1, best = 0;
+    for (let i = 0; i < boxes.length; i++) {
+      const b = boxes[i]; if (b.length < 2) continue;
+      let pop = 0; for (const c of b) pop += hist[c];
+      if (pop > best) { best = pop; bi = i; }
+    }
+    if (bi < 0) break;
+    const b = boxes[bi];
+    let rmin=31,rmax=0,gmin=31,gmax=0,bmin=31,bmax=0;
+    for (const c of b) {
+      const r=R(c),g=G(c),bl=B(c);
+      if(r<rmin)rmin=r; if(r>rmax)rmax=r; if(g<gmin)gmin=g; if(g>gmax)gmax=g; if(bl<bmin)bmin=bl; if(bl>bmax)bmax=bl;
+    }
+    const dr=rmax-rmin, dg=gmax-gmin, db=bmax-bmin;
+    const ch = (dr>=dg && dr>=db) ? R : (dg>=db ? G : B);
+    b.sort((x, y) => ch(x) - ch(y));
+    let pop = 0; for (const c of b) pop += hist[c];
+    let acc = 0, cut = 1;
+    for (let i = 0; i < b.length - 1; i++) { acc += hist[b[i]]; cut = i + 1; if (acc >= pop / 2) break; }
+    boxes.splice(bi, 1, b.slice(0, cut), b.slice(cut));
+  }
+  const palette = new Uint8Array(256 * 3);
+  const n = boxes.length;
+  for (let i = 0; i < n; i++) {
+    let r=0,g=0,bl=0,p=0;
+    for (const c of boxes[i]) { const h=hist[c]; r+=R(c)*h; g+=G(c)*h; bl+=B(c)*h; p+=h; }
+    const e = v => { v = Math.round(v / p); return (v << 3) | (v >> 2); };
+    palette[i*3]=e(r); palette[i*3+1]=e(g); palette[i*3+2]=e(bl);
+  }
+  // 15-bit renk -> en yakın palet indeksi
+  const lut = new Uint8Array(32768);
+  for (const c of bins) {
+    const r=(R(c)<<3)|(R(c)>>2), g=(G(c)<<3)|(G(c)>>2), b=(B(c)<<3)|(B(c)>>2);
+    let bd = 1e9, bk = 0;
+    for (let k = 0; k < n; k++) {
+      const dr=r-palette[k*3], dg=g-palette[k*3+1], db=b-palette[k*3+2];
+      const d = dr*dr*2 + dg*dg*4 + db*db*3;
+      if (d < bd) { bd = d; bk = k; }
+    }
+    lut[c] = bk;
+  }
+  return { palette, lut };
+}
+
+const _tab = new Int32Array(1 << 20), _ver = new Uint32Array(1 << 20);
+let _curVer = 0;
+function lzw(idx, minCode) {
+  const clear = 1 << minCode, eoi = clear + 1;
+  const out = [];
+  let cur = 0, shift = 0, size = minCode + 1, next = eoi + 1;
+  const emit = code => {
+    cur |= code << shift; shift += size;
+    while (shift >= 8) { out.push(cur & 255); cur >>>= 8; shift -= 8; }
+  };
+  _curVer++;
+  emit(clear);
+  let prefix = idx[0];
+  for (let i = 1; i < idx.length; i++) {
+    const k = idx[i], key = (prefix << 8) | k;
+    if (_ver[key] === _curVer) { prefix = _tab[key]; continue; }
+    emit(prefix);
+    if (next < 4096) {
+      _ver[key] = _curVer; _tab[key] = next;
+      if (next === (1 << size)) size++;
+      next++;
+    } else {
+      emit(clear); _curVer++; size = minCode + 1; next = eoi + 1;
+    }
+    prefix = k;
+  }
+  emit(prefix); emit(eoi);
+  if (shift > 0) out.push(cur & 255);
+  return out;
+}
+
+// Kareler arasında değişmeyen pikseller saydam yapılır (dosya boyutunu küçültür).
+function encodeGif(frames, w, h, pal, delayCs, loop, onProgress) {
+  const { palette, lut } = pal, TRANS = 255;
+  const parts = [];
+  const u16 = v => [v & 255, (v >> 8) & 255];
+  const str = s => Array.from(s).map(c => c.charCodeAt(0));
+  parts.push(new Uint8Array([...str('GIF89a'), ...u16(w), ...u16(h), 0xF7, 0, 0]));
+  parts.push(palette);
+  if (loop) parts.push(new Uint8Array([0x21, 0xFF, 0x0B, ...str('NETSCAPE2.0'), 3, 1, 0, 0, 0]));
+  let prev = null;
+  for (let f = 0; f < frames.length; f++) {
+    const px = frames[f], idx = new Uint8Array(px.length);
+    for (let i = 0; i < px.length; i++) idx[i] = lut[px[i]];
+    const send = new Uint8Array(idx);
+    if (prev) for (let i = 0; i < idx.length; i++) if (idx[i] === prev[i]) send[i] = TRANS;
+    prev = idx;
+    parts.push(new Uint8Array([0x21, 0xF9, 4, 0x05, ...u16(delayCs), TRANS, 0]));
+    parts.push(new Uint8Array([0x2C, 0, 0, 0, 0, ...u16(w), ...u16(h), 0, 8]));
+    const data = lzw(send, 8);
+    const blocks = [];
+    for (let i = 0; i < data.length; i += 255) {
+      const chunk = data.slice(i, i + 255);
+      blocks.push(chunk.length, ...chunk);
+    }
+    blocks.push(0);
+    parts.push(new Uint8Array(blocks));
+    if (onProgress) onProgress(f + 1, frames.length);
+  }
+  parts.push(new Uint8Array([0x3B]));
+  return parts;
+}
+//--CORE-END
+
+// ---------------- Arayüz ----------------
+const $ = id => document.getElementById(id);
+const vid = $('vid'), stage = $('stage'), sctx = stage.getContext('2d');
+const ACC = '#4da3ff', ORG = '#ffb454';
+let fileName = 'video', objUrl = null, dur = 0, vw = 0, vh = 0;
+let rot = 0, mode = 'none', rect = null;                 // rect: döndürülmüş uzayda {x,y,w,h}
+let quad = { pts: [], A: null, B: null, h: 0, done: false, hover: null };
+let Wr = 1, Hr = 1, k = 1, needDraw = true;              // döndürülmüş kare boyutu, önizleme ölçeği
+let S = 0, E = 1;
+
+const fmt = t => { const m = Math.floor(t / 60), s = (t % 60).toFixed(2).padStart(5, '0'); return m + ':' + s; };
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const requestDraw = () => { needDraw = true; };
+
+// ---- Dosya yükleme ----
+function loadFile(f) {
+  if (!f) return;
+  fileName = f.name.replace(/\.[^.]+$/, '');
+  if (objUrl) URL.revokeObjectURL(objUrl);
+  objUrl = URL.createObjectURL(f);
+  vid.src = objUrl;
+  $('out').classList.add('hide');
+}
+vid.addEventListener('loadedmetadata', () => {
+  dur = vid.duration; vw = vid.videoWidth; vh = vid.videoHeight;
+  for (const id of ['sRange', 'eRange', 'pos']) $(id).max = dur;
+  $('sNum').max = $('eNum').max = dur;
+  rot = 0; rect = null; resetQuad(); syncRotUI();
+  $('editor').classList.remove('hide');
+  layoutStage();
+  setStart(0); setEnd(Math.min(dur, 5));
+  $('status').textContent = '';
+  updateHint(); updateInfo(); requestDraw();
+});
+vid.addEventListener('loadeddata', requestDraw);
+vid.addEventListener('seeked', () => { requestDraw(); $('pos').value = vid.currentTime; $('tcur').textContent = fmt(vid.currentTime); });
+vid.addEventListener('play', () => { $('play').textContent = '⏸'; });
+vid.addEventListener('pause', () => { $('play').textContent = '▶'; requestDraw(); });
+vid.addEventListener('error', () => alert('Bu video tarayıcıda açılamadı. mp4 (H.264) ya da webm dene.'));
+
+const drop = $('drop');
+drop.onclick = () => $('file').click();
+$('file').onchange = e => loadFile(e.target.files[0]);
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); loadFile(e.dataTransfer.files[0]); };
+
+// ---- Oynatma ----
+$('play').onclick = () => {
+  if (vid.paused) { if (vid.currentTime < S || vid.currentTime >= E) vid.currentTime = S; vid.play(); }
+  else vid.pause();
+};
+$('pos').oninput = e => { vid.currentTime = +e.target.value; };
+
+// ---- Zaman kırpma ----
+function setStart(v) { S = Math.max(0, Math.min(+v || 0, E > 0 ? Math.max(E - 0.05, 0) : 0)); $('sRange').value = S; $('sNum').value = +S.toFixed(2); updateInfo(); }
+function setEnd(v)   { E = Math.min(dur, Math.max(+v || 0, S + 0.05)); $('eRange').value = E; $('eNum').value = +E.toFixed(2); updateInfo(); }
+$('sRange').oninput = e => { setStart(e.target.value); vid.currentTime = S; };
+$('eRange').oninput = e => { setEnd(e.target.value); vid.currentTime = Math.max(0, E - 0.05); };
+$('sNum').onchange = e => { setStart(e.target.value); vid.currentTime = S; };
+$('eNum').onchange = e => { setEnd(e.target.value); vid.currentTime = Math.max(0, E - 0.05); };
+$('sNow').onclick = () => { if (vid.currentTime >= E) setEnd(Math.min(dur, vid.currentTime + 1)); setStart(vid.currentTime); };
+$('eNow').onclick = () => { setEnd(vid.currentTime); };
+for (const id of ['w', 'fps']) $(id).oninput = updateInfo;
+
+// ---- Geometri ----
+// Tüm kırpma şekilleri "döndürülmüş uzayda" (video + döndürme sonrası sınırlayıcı kutu) tutulur.
+function rotBox() {
+  const r = rot * Math.PI / 180, c = Math.abs(Math.cos(r)), s = Math.abs(Math.sin(r));
+  Wr = +(vw * c + vh * s).toFixed(3); Hr = +(vw * s + vh * c).toFixed(3);
+}
+function layoutStage() {
+  if (!vw) return;
+  rotBox();
+  const avail = Math.max(200, $('stageWrap').clientWidth);
+  const maxH = Math.max(240, Math.min(460, window.innerHeight * 0.6));
+  const w = Math.max(1, Math.round(Wr * Math.min(avail / Wr, maxH / Hr)));
+  k = w / Wr;
+  stage.width = w; stage.height = Math.max(1, Math.round(Hr * k));
+  requestDraw();
+}
+window.addEventListener('resize', layoutStage);
+
+// Alt kenar A-B, C noktası hangi tarafta ise karşı kenar o tarafta olur; sonuç aynalanmadan (sadece döndürülerek) dik çıkar.
+function orient(A, B, C) {
+  const len = dist(A, B) || 1;
+  let e = { x: (B.x - A.x) / len, y: (B.y - A.y) / len };
+  let n = { x: e.y, y: -e.x };
+  if ((C.x - A.x) * n.x + (C.y - A.y) * n.y < 0) {
+    [A, B] = [B, A]; e = { x: -e.x, y: -e.y }; n = { x: e.y, y: -e.x };
+  }
+  return { A, B, e, n, h: Math.max(4, (C.x - A.x) * n.x + (C.y - A.y) * n.y) };
+}
+function doneGeom() {
+  const { A, B, h } = quad, len = dist(A, B) || 1;
+  const e = { x: (B.x - A.x) / len, y: (B.y - A.y) / len };
+  return { A, B, h, e, n: { x: e.y, y: -e.x } };
+}
+function quadShape() {
+  if (quad.done) return doneGeom();
+  if (quad.pts.length === 2 && quad.hover) return orient(quad.pts[0], quad.pts[1], quad.hover);
+  return null;
+}
+function resetQuad() { quad = { pts: [], A: null, B: null, h: 0, done: false, hover: null }; }
+
+// Çıktı piksel (ox,oy) -> döndürülmüş uzay: P = O + ox*ex + oy*ey
+function cropGeom() {
+  if (mode === 'rect' && rect && rect.w >= 4 && rect.h >= 4)
+    return { O: { x: rect.x, y: rect.y }, ex: { x: 1, y: 0 }, ey: { x: 0, y: 1 }, cw: rect.w, ch: rect.h };
+  if (mode === 'quad' && quad.done) {
+    const q = doneGeom();
+    return { O: { x: q.A.x + q.n.x * q.h, y: q.A.y + q.n.y * q.h }, ex: q.e, ey: { x: -q.n.x, y: -q.n.y }, cw: dist(q.A, q.B), ch: q.h };
+  }
+  return { O: { x: 0, y: 0 }, ex: { x: 1, y: 0 }, ey: { x: 0, y: 1 }, cw: Wr, ch: Hr };
+}
+
+// Videonun şu anki karesini (döndürme + kırpma uygulanmış) ctx'e çizer.
+function drawFrameTo(ctx, sx, sy, g, outW, outH) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = $('fill').value; ctx.fillRect(0, 0, outW, outH);
+  ctx.setTransform(sx * g.ex.x, sy * g.ey.x, sx * g.ex.y, sy * g.ey.y,
+                   -sx * (g.O.x * g.ex.x + g.O.y * g.ex.y), -sy * (g.O.x * g.ey.x + g.O.y * g.ey.y));
+  ctx.translate(Wr / 2, Hr / 2);
+  ctx.rotate(rot * Math.PI / 180);
+  ctx.translate(-vw / 2, -vh / 2);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(vid, 0, 0);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+// ---- Önizleme çizimi ----
+function rectHandles() {
+  if (!rect) return [];
+  const { x, y, w, h } = rect, cx = x + w / 2, cy = y + h / 2;
+  return [['nw', x, y], ['n', cx, y], ['ne', x + w, y], ['e', x + w, cy], ['se', x + w, y + h], ['s', cx, y + h], ['sw', x, y + h], ['w', x, cy]]
+    .map(([id, px, py]) => ({ id, x: px, y: py }));
+}
+function quadHandles() {
+  if (!quad.done) return [];
+  const q = doneGeom();
+  return [{ id: 'A', x: q.A.x, y: q.A.y }, { id: 'B', x: q.B.x, y: q.B.y },
+          { id: 'H', x: (q.A.x + q.B.x) / 2 + q.n.x * q.h, y: (q.A.y + q.B.y) / 2 + q.n.y * q.h }];
+}
+function polyPath(c, pts) { c.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y); c.closePath(); }
+function overlay() {
+  const c = sctx, T = p => ({ x: p.x * k, y: p.y * k });
+  c.lineJoin = 'round';
+  if (mode === 'rect' && rect) {
+    const x = rect.x * k, y = rect.y * k, w = rect.w * k, h = rect.h * k;
+    c.fillStyle = 'rgba(0,0,0,.55)'; c.beginPath(); c.rect(0, 0, stage.width, stage.height); c.rect(x, y, w, h); c.fill('evenodd');
+    c.strokeStyle = ACC; c.lineWidth = 2; c.strokeRect(x, y, w, h);
+    for (const hd of rectHandles()) { c.fillStyle = '#fff'; c.fillRect(hd.x * k - 4, hd.y * k - 4, 8, 8); c.strokeRect(hd.x * k - 4, hd.y * k - 4, 8, 8); }
+  } else if (mode === 'quad') {
+    const q = quadShape();
+    if (q) {
+      const C = { x: q.B.x + q.n.x * q.h, y: q.B.y + q.n.y * q.h }, D = { x: q.A.x + q.n.x * q.h, y: q.A.y + q.n.y * q.h };
+      const P = [q.A, q.B, C, D].map(T);
+      c.fillStyle = 'rgba(0,0,0,.55)'; c.beginPath(); c.rect(0, 0, stage.width, stage.height); polyPath(c, P); c.fill('evenodd');
+      c.strokeStyle = ACC; c.lineWidth = 2; c.beginPath(); polyPath(c, P); c.stroke();
+      c.strokeStyle = ORG; c.lineWidth = 3; c.beginPath(); c.moveTo(P[0].x, P[0].y); c.lineTo(P[1].x, P[1].y); c.stroke();
+    } else if (quad.pts.length === 2) {
+      const [a, b] = quad.pts.map(T);
+      c.strokeStyle = ORG; c.lineWidth = 3; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
+    }
+    const dots = quad.done ? [quad.A, quad.B] : quad.pts;
+    for (const p of dots) { const t = T(p); c.fillStyle = ORG; c.strokeStyle = '#000'; c.lineWidth = 1.5; c.beginPath(); c.arc(t.x, t.y, 5, 0, 7); c.fill(); c.stroke(); }
+    const H = quadHandles().find(h => h.id === 'H');
+    if (H) { c.fillStyle = '#fff'; c.strokeStyle = ACC; c.lineWidth = 2; c.fillRect(H.x * k - 5, H.y * k - 5, 10, 10); c.strokeRect(H.x * k - 5, H.y * k - 5, 10, 10); }
+  }
+}
+function renderStage() {
+  const g = { O: { x: 0, y: 0 }, ex: { x: 1, y: 0 }, ey: { x: 0, y: 1 }, cw: Wr, ch: Hr };
+  drawFrameTo(sctx, k, k, g, stage.width, stage.height);
+  overlay();
+}
+function tick() {
+  if (!vid.paused) {
+    if (E > 0 && vid.currentTime >= E) vid.currentTime = S;
+    $('pos').value = vid.currentTime; $('tcur').textContent = fmt(vid.currentTime);
+  }
+  if (vw && (!vid.paused || needDraw)) { needDraw = false; renderStage(); }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ---- Kırpma modu / döndürme arayüzü ----
+function updateHint() {
+  let t = 'Kırpma yok — tüm kare kullanılır.';
+  if (mode === 'rect') t = 'Görüntü üzerinde sürükleyerek alan çiz. Köşe/kenar kutularıyla boyutlandır, içinden tutup taşı.';
+  if (mode === 'quad') t = quad.done ? 'Hazır — turuncu noktaları ve üstteki kutuyu sürükleyerek ayarla. Çıktı turuncu kenar alta gelecek şekilde düz çıkar.'
+    : ['1/3: Alt kenarın ilk noktasına tıkla.', '2/3: Alt kenarın ikinci noktasına tıkla.', '3/3: Karşı (üst) kenarın olacağı yere tıkla — alan alt kenara dik oluşur.'][quad.pts.length];
+  $('modeHint').textContent = t;
+}
+for (const b of $('modeSeg').children) b.onclick = () => {
+  mode = b.dataset.mode;
+  for (const x of $('modeSeg').children) x.classList.toggle('on', x === b);
+  stage.style.cursor = mode === 'none' ? 'default' : 'crosshair';
+  updateHint(); updateInfo(); requestDraw();
+};
+$('cropReset').onclick = () => { rect = null; resetQuad(); updateHint(); updateInfo(); requestDraw(); };
+
+function syncRotUI() {
+  $('rot').value = rot;
+  for (const b of $('rotSeg').children) b.classList.toggle('on', +b.dataset.rot === rot);
+}
+function setRot(v) {
+  v = +v; if (!isFinite(v)) return;
+  v = ((v + 180) % 360 + 360) % 360 - 180;               // -180..180
+  if (v === rot) return;
+  rot = v; rect = null; resetQuad();                       // kırpma şekli döndürülmüş uzayda olduğundan sıfırlanır
+  syncRotUI(); layoutStage(); updateHint(); updateInfo();
+}
+for (const b of $('rotSeg').children) b.onclick = () => setRot(b.dataset.rot);
+$('rot').oninput = e => { if (e.target.value !== '' && e.target.value !== '-') setRot(e.target.value); };
+$('fill').oninput = requestDraw;
+
+// ---- Fare / dokunmatik ----
+const MIN = 8;
+let drag = null;
+const toSpace = e => { const r = stage.getBoundingClientRect(); return { x: (e.clientX - r.left) * stage.width / r.width / k, y: (e.clientY - r.top) * stage.height / r.height / k }; };
+const clampP = p => ({ x: clamp(p.x, 0, Wr), y: clamp(p.y, 0, Hr) });
+const hitR = () => 10 / k;
+const findHit = (hs, p) => hs.find(h => Math.hypot(h.x - p.x, h.y - p.y) <= hitR());
+const inRect = p => rect && p.x >= rect.x && p.x <= rect.x + rect.w && p.y >= rect.y && p.y <= rect.y + rect.h;
+const CUR = { nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize', n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize' };
+
+stage.onpointerdown = e => {
+  if (!vw || mode === 'none') return;
+  const p = toSpace(e);
+  if (mode === 'rect') {
+    const hd = findHit(rectHandles(), p);
+    if (hd) drag = { type: 'handle', id: hd.id };
+    else if (inRect(p)) drag = { type: 'move', dx: p.x - rect.x, dy: p.y - rect.y };
+    else { const q = clampP(p); drag = { type: 'new', ax: q.x, ay: q.y }; rect = { x: q.x, y: q.y, w: 0, h: 0 }; }
+  } else {
+    if (quad.done) {
+      const hd = findHit(quadHandles(), p);
+      if (hd) drag = { type: 'q', id: hd.id };
+    } else if (quad.pts.length < 2) {
+      const pt = clampP(p);
+      if (quad.pts.length === 1 && dist(pt, quad.pts[0]) < 4) return;
+      quad.pts.push(pt);
+    } else {
+      const o = orient(quad.pts[0], quad.pts[1], p);
+      quad.A = o.A; quad.B = o.B; quad.h = o.h; quad.done = true; quad.hover = null;
+    }
+    updateHint(); updateInfo();
+  }
+  if (drag) stage.setPointerCapture(e.pointerId);
+  requestDraw();
+};
+stage.onpointermove = e => {
+  if (!vw || mode === 'none') return;
+  const p = toSpace(e);
+  if (!drag) {
+    if (mode === 'quad' && !quad.done && quad.pts.length === 2) { quad.hover = p; requestDraw(); }
+    let cur = 'crosshair';
+    if (mode === 'rect') { const hd = findHit(rectHandles(), p); cur = hd ? CUR[hd.id] : inRect(p) ? 'move' : 'crosshair'; }
+    else if (quad.done) cur = findHit(quadHandles(), p) ? 'grab' : 'default';
+    stage.style.cursor = cur;
+    return;
+  }
+  if (mode === 'rect') {
+    const c = clampP(p);
+    if (drag.type === 'new') rect = { x: Math.min(drag.ax, c.x), y: Math.min(drag.ay, c.y), w: Math.abs(c.x - drag.ax), h: Math.abs(c.y - drag.ay) };
+    else if (drag.type === 'move') { rect.x = clamp(p.x - drag.dx, 0, Wr - rect.w); rect.y = clamp(p.y - drag.dy, 0, Hr - rect.h); }
+    else {
+      let l = rect.x, r = l + rect.w, t = rect.y, b = t + rect.h;
+      if (drag.id.includes('w')) l = Math.min(c.x, r - MIN);
+      if (drag.id.includes('e')) r = Math.max(c.x, l + MIN);
+      if (drag.id.includes('n')) t = Math.min(c.y, b - MIN);
+      if (drag.id.includes('s')) b = Math.max(c.y, t + MIN);
+      rect = { x: l, y: t, w: r - l, h: b - t };
+    }
+  } else if (drag.type === 'q') {
+    const g = doneGeom(), c = clampP(p);
+    if (drag.id === 'A' && dist(c, quad.B) >= 4) quad.A = c;
+    else if (drag.id === 'B' && dist(c, quad.A) >= 4) quad.B = c;
+    else if (drag.id === 'H') quad.h = Math.max(4, (p.x - g.A.x) * g.n.x + (p.y - g.A.y) * g.n.y);
+  }
+  updateInfo(); requestDraw();
+};
+stage.onpointerup = stage.onpointercancel = () => {
+  if (drag && mode === 'rect' && rect && (rect.w < 4 || rect.h < 4)) rect = null;
+  drag = null; updateInfo(); requestDraw();
+};
+
+// ---- Bilgi / boyut ----
+function dims() {
+  const g = cropGeom();
+  const w = clamp(parseInt($('w').value) || 480, 16, 1920);
+  return { w, h: Math.max(1, Math.round(w * g.ch / g.cw)) };
+}
+function updateInfo() {
+  if (!dur) return;
+  const fps = clamp(parseInt($('fps').value) || 12, 1, 30);
+  const n = Math.max(1, Math.floor((E - S) * fps));
+  const { w, h } = dims(), g = cropGeom();
+  $('sel').textContent = `Seçili aralık: ${fmt(S)} → ${fmt(E)}  (${(E - S).toFixed(2)} sn)`
+    + `  ·  Kırpma alanı: ${Math.round(g.cw)}×${Math.round(g.ch)} px` + (rot ? `  ·  döndürme ${rot}°` : '');
+  const raw = n * w * h * 2 / 1048576;
+  $('est').innerHTML = `${n} kare, ${w}×${h}px` + (n > 400 || raw > 600
+    ? ' <span class="warn">— çok büyük; süreyi, FPS’i ya da genişliği azaltman önerilir.</span>' : '');
+}
+
+async function seek(t) {
+  return new Promise(res => {
+    const done = () => { vid.removeEventListener('seeked', done); res(); };
+    vid.addEventListener('seeked', done);
+    vid.currentTime = t;
+  });
+}
+
+// ---- GIF oluştur ----
+let busy = false;
+$('go').onclick = async () => {
+  if (busy) return; busy = true;
+  $('go').disabled = true; vid.pause();
+  const prog = $('prog'), st = $('status');
+  prog.classList.remove('hide'); prog.value = 0;
+  try {
+    const fps = clamp(parseInt($('fps').value) || 12, 1, 30);
+    const { w, h } = dims(), g = cropGeom();
+    const sx = w / g.cw, sy = h / g.ch;
+    const n = Math.max(1, Math.floor((E - S) * fps));
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const cx = cv.getContext('2d', { willReadFrequently: true });
+    const frames = [];
+    for (let i = 0; i < n; i++) {
+      await seek(Math.min(S + i / fps, dur - 0.001));
+      drawFrameTo(cx, sx, sy, g, w, h);
+      const d = cx.getImageData(0, 0, w, h).data;
+      const f = new Uint16Array(w * h);
+      for (let p = 0, q = 0; p < f.length; p++, q += 4)
+        f[p] = ((d[q] >> 3) << 10) | ((d[q + 1] >> 3) << 5) | (d[q + 2] >> 3);
+      frames.push(f);
+      prog.value = (i + 1) / n * 0.6;
+      st.textContent = `Kareler alınıyor: ${i + 1}/${n}`;
+      if (i % 4 === 3) await wait(0);
+    }
+    st.textContent = 'Palet hesaplanıyor…'; await wait(10);
+    const pal = buildPalette(frames);
+    st.textContent = 'GIF kodlanıyor…'; await wait(10);
+    const delay = Math.max(2, Math.round(100 / fps));
+    const parts = encodeGif(frames, w, h, pal, delay, $('loop').checked, (a, b) => {
+      prog.value = 0.6 + a / b * 0.4;
+    });
+    const blob = new Blob(parts, { type: 'image/gif' });
+    const url = URL.createObjectURL(blob);
+    const name = `${fileName}_${fmt(S).replace(':', 'm')}-${fmt(E).replace(':', 'm')}.gif`.replace(/\s/g, '');
+    $('out').innerHTML = `<b>Hazır</b> — ${(blob.size / 1048576).toFixed(2)} MB, ${n} kare, ${w}×${h}px`
+      + `<img src="${url}"><a class="dl" href="${url}" download="${name}">GIF’i indir</a>`;
+    $('out').classList.remove('hide');
+    st.textContent = '';
+  } catch (err) {
+    st.textContent = 'Hata: ' + err.message;
+  }
+  prog.classList.add('hide'); $('go').disabled = false; busy = false;
+};
+
+// ---------------- Sekmeler ----------------
+for (const b of document.querySelectorAll('.tabs .tab')) b.onclick = () => {
+  for (const x of document.querySelectorAll('.tabs .tab')) x.classList.toggle('on', x === b);
+  const up = b.dataset.tab === 'up';
+  $('tab-gif').classList.toggle('hide', up);
+  $('tab-up').classList.toggle('hide', !up);
+  if (up) vid.pause(); else layoutStage();
+};
+
+// ---------------- Çözünürlük yükseltme ----------------
+// Lanczos-3 yeniden örnekleme + unsharp mask. Yapay zekâ kullanmaz; tamamen çevrimdışı çalışır.
+const lanczos = x => {
+  if (x === 0) return 1; const ax = Math.abs(x); if (ax >= 3) return 0;
+  const p = Math.PI * x; return 3 * Math.sin(p) * Math.sin(p / 3) / (p * p);
+};
+function makeWeights(srcN, dstN, nearest) {
+  const scale = dstN / srcN, fs = Math.max(1, 1 / scale), support = (nearest ? 0.5 : 3) * fs;
+  const taps = Math.ceil(support * 2) + 2;
+  const ix = new Int32Array(dstN * taps), w = new Float32Array(dstN * taps), cnt = new Int32Array(dstN);
+  for (let i = 0; i < dstN; i++) {
+    if (nearest) { ix[i * taps] = clamp(Math.floor((i + 0.5) / scale), 0, srcN - 1); w[i * taps] = 1; cnt[i] = 1; continue; }
+    const c = (i + 0.5) / scale - 0.5, lo = Math.ceil(c - support), hi = Math.floor(c + support);
+    let sum = 0, n = 0;
+    for (let j = lo; j <= hi; j++) { const wt = lanczos((j - c) / fs); ix[i * taps + n] = clamp(j, 0, srcN - 1); w[i * taps + n] = wt; sum += wt; n++; }
+    for (let m = 0; m < n; m++) w[i * taps + m] /= sum;
+    cnt[i] = n;
+  }
+  return { ix, w, cnt, taps };
+}
+async function resample(img, dw, dh, nearest, prog) {
+  const sw = img.width, sh = img.height, sd = img.data;
+  const X = makeWeights(sw, dw, nearest), Y = makeWeights(sh, dh, nearest);
+  const inter = new Float32Array(dw * sh * 4);
+  for (let y = 0; y < sh; y++) {                               // yatay geçiş (alfa ile çarpılmış renk)
+    const row = y * sw * 4, orow = y * dw * 4;
+    for (let x = 0; x < dw; x++) {
+      let r = 0, g = 0, b = 0, a = 0; const base = x * X.taps, n = X.cnt[x];
+      for (let t = 0; t < n; t++) {
+        const o = row + X.ix[base + t] * 4, wt = X.w[base + t], al = sd[o + 3];
+        const f = al / 255 * wt;
+        r += sd[o] * f; g += sd[o + 1] * f; b += sd[o + 2] * f; a += al * wt;
+      }
+      const q = orow + x * 4; inter[q] = r; inter[q + 1] = g; inter[q + 2] = b; inter[q + 3] = a;
+    }
+    if (y % 32 === 31) { prog(y / sh * 0.5); await wait(0); }
+  }
+  const out = new Uint8ClampedArray(dw * dh * 4), acc = new Float32Array(dw * 4);
+  for (let y = 0; y < dh; y++) {                               // dikey geçiş
+    acc.fill(0); const base = y * Y.taps, n = Y.cnt[y];
+    for (let t = 0; t < n; t++) {
+      const wt = Y.w[base + t], rb = Y.ix[base + t] * dw * 4;
+      for (let i = 0; i < acc.length; i++) acc[i] += inter[rb + i] * wt;
+    }
+    const ob = y * dw * 4;
+    for (let x = 0; x < dw; x++) {
+      const i = x * 4, a = acc[i + 3];
+      if (a >= 254.5) { out[ob + i] = acc[i]; out[ob + i + 1] = acc[i + 1]; out[ob + i + 2] = acc[i + 2]; out[ob + i + 3] = 255; }
+      else if (a > 0.5) { const m = 255 / a; out[ob + i] = acc[i] * m; out[ob + i + 1] = acc[i + 1] * m; out[ob + i + 2] = acc[i + 2] * m; out[ob + i + 3] = a; }
+    }
+    if (y % 32 === 31) { prog(0.5 + y / dh * 0.5); await wait(0); }
+  }
+  return out;
+}
+async function unsharp(out, w, h, amount, sigma, prog) {
+  const r = Math.ceil(sigma * 3), K = new Float32Array(2 * r + 1); let ks = 0;
+  for (let i = -r; i <= r; i++) { K[i + r] = Math.exp(-i * i / (2 * sigma * sigma)); ks += K[i + r]; }
+  for (let i = 0; i < K.length; i++) K[i] /= ks;
+  const tmp = new Uint8ClampedArray(out.length);
+  for (let y = 0; y < h; y++) {                                // yatay bulanıklık
+    const rb = y * w * 4;
+    for (let x = 0; x < w; x++) {
+      let s0 = 0, s1 = 0, s2 = 0;
+      for (let j = -r; j <= r; j++) {
+        const o = rb + clamp(x + j, 0, w - 1) * 4, k = K[j + r];
+        s0 += out[o] * k; s1 += out[o + 1] * k; s2 += out[o + 2] * k;
+      }
+      const q = rb + x * 4; tmp[q] = s0; tmp[q + 1] = s1; tmp[q + 2] = s2;
+    }
+    if (y % 32 === 31) { prog(y / h * 0.5); await wait(0); }
+  }
+  const acc = new Float32Array(w * 3);
+  for (let y = 0; y < h; y++) {                                // dikey bulanıklık + keskinleştirme
+    acc.fill(0);
+    for (let j = -r; j <= r; j++) {
+      const rb = clamp(y + j, 0, h - 1) * w * 4, k = K[j + r];
+      for (let x = 0; x < w; x++) { const o = rb + x * 4, i = x * 3; acc[i] += tmp[o] * k; acc[i + 1] += tmp[o + 1] * k; acc[i + 2] += tmp[o + 2] * k; }
+    }
+    const ob = y * w * 4;
+    for (let x = 0; x < w; x++) {
+      const o = ob + x * 4, i = x * 3;
+      out[o] = out[o] + amount * (out[o] - acc[i]);
+      out[o + 1] = out[o + 1] + amount * (out[o + 1] - acc[i + 1]);
+      out[o + 2] = out[o + 2] + amount * (out[o + 2] - acc[i + 2]);
+    }
+    if (y % 32 === 31) { prog(0.5 + y / h * 0.5); await wait(0); }
+  }
+}
+
+// Kenar koruyan gürültü azaltma (bilateral filtre, 5×5). Büyütmeden önce kaynağa uygulanır.
+async function denoise(img, strength, prog) {
+  const w = img.width, h = img.height, src = img.data, out = new Uint8ClampedArray(src.length);
+  const R = 2, sigS = 1.5, sigR = 6 + strength * 40;
+  const ws = new Float32Array((2 * R + 1) ** 2);
+  for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) ws[(dy + R) * (2 * R + 1) + dx + R] = Math.exp(-(dx * dx + dy * dy) / (2 * sigS * sigS));
+  const lr = new Float32Array(766);
+  for (let d = 0; d < 766; d++) { const dd = d / 3; lr[d] = Math.exp(-dd * dd / (2 * sigR * sigR)); }
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const o = (y * w + x) * 4, r0 = src[o], g0 = src[o + 1], b0 = src[o + 2];
+      let r = 0, g = 0, b = 0, sw = 0;
+      for (let dy = -R; dy <= R; dy++) {
+        const yy = clamp(y + dy, 0, h - 1) * w;
+        for (let dx = -R; dx <= R; dx++) {
+          const q = (yy + clamp(x + dx, 0, w - 1)) * 4;
+          const rr = src[q], gg = src[q + 1], bb = src[q + 2];
+          const wt = ws[(dy + R) * (2 * R + 1) + dx + R] * lr[Math.abs(rr - r0) + Math.abs(gg - g0) + Math.abs(bb - b0)];
+          r += rr * wt; g += gg * wt; b += bb * wt; sw += wt;
+        }
+      }
+      out[o] = r / sw; out[o + 1] = g / sw; out[o + 2] = b / sw; out[o + 3] = src[o + 3];
+    }
+    if (y % 16 === 15) { prog(y / h); await wait(0); }
+  }
+  return { width: w, height: h, data: out };
+}
+
+const UP_PRESETS = {
+  photo:   { name: 'İyi kaliteli fotoğraf',      s: 2, sharp: 50, dn: 0,  fmt: 'png', near: false },
+  jpglow:  { name: 'Sıkıştırılmış / eski JPG',   s: 2, sharp: 35, dn: 50, fmt: 'png', near: false },
+  small:   { name: 'Küçük / düşük çözünürlüklü', s: 3, sharp: 30, dn: 30, fmt: 'png', near: false },
+  graphic: { name: 'Ekran görüntüsü / çizim',    s: 2, sharp: 60, dn: 0,  fmt: 'png', near: false },
+  pixel:   { name: 'Piksel sanatı',              s: 4, sharp: 0,  dn: 0,  fmt: 'png', near: true  },
+};
+
+// ---- Arayüz ----
+const MAXPX = 16e6;
+let upFile = null, upBmp = null, upUrl = null, upBusy = false;
+const uDrop = $('uDrop');
+uDrop.onclick = () => $('uFile').click();
+$('uFile').onchange = e => upLoad(e.target.files[0]);
+uDrop.ondragover = e => { e.preventDefault(); uDrop.classList.add('over'); };
+uDrop.ondragleave = () => uDrop.classList.remove('over');
+uDrop.ondrop = e => { e.preventDefault(); uDrop.classList.remove('over'); upLoad(e.dataTransfer.files[0]); };
+
+async function upLoad(f) {
+  if (!f) return;
+  let bmp;
+  try { bmp = await createImageBitmap(f); } catch (_) { alert('Bu resim açılamadı.'); return; }
+  upFile = f; upBmp = bmp;
+  if (upUrl) URL.revokeObjectURL(upUrl);
+  upUrl = URL.createObjectURL(f);
+  $('uPanel').classList.remove('hide'); $('uOut').classList.add('hide'); $('uStatus').textContent = '';
+  $('uSrcInfo').textContent = `${f.name} — ${bmp.width}×${bmp.height} px`;
+  const bpp = f.size / (bmp.width * bmp.height);          // bayt/piksel: düşükse yoğun sıkıştırılmış
+  let key = 'photo', why = '';
+  if (f.type === 'image/jpeg' && bpp < 0.15) { key = 'jpglow'; why = 'dosya yoğun sıkıştırılmış görünüyor'; }
+  else if (Math.min(bmp.width, bmp.height) < 500) { key = 'small'; why = 'resim küçük'; }
+  applyPreset(key, `Önerilen ayar uygulandı: ${UP_PRESETS[key].name}` + (why ? ` (${why})` : '') + '. Başka bir tür seçebilir ya da aşağıdan elle değiştirebilirsin.');
+}
+function upDims() {
+  const s = clamp(parseFloat($('uScale').value) || 2, 1, 8);
+  return { s, w: Math.max(1, Math.round(upBmp.width * s)), h: Math.max(1, Math.round(upBmp.height * s)) };
+}
+function upEst() {
+  if (!upBmp) return;
+  const d = upDims(), bad = d.w * d.h > MAXPX;
+  $('uEst').innerHTML = `Çıktı: ${d.w}×${d.h} px (${(d.w * d.h / 1e6).toFixed(1)} MP)`
+    + (bad ? ' <span class="warn">— çok büyük (en fazla 16 MP), ölçeği düşür.</span>' : '');
+  $('uGo').disabled = bad || upBusy;
+  for (const b of $('uScaleSeg').children) b.classList.toggle('on', +b.dataset.s === d.s);
+}
+const clearPre = () => { for (const b of $('uPresets').children) b.classList.remove('on'); $('uSuggest').textContent = ''; };
+for (const b of $('uScaleSeg').children) b.onclick = () => { $('uScale').value = b.dataset.s; clearPre(); upEst(); };
+$('uScale').oninput = () => { clearPre(); upEst(); };
+$('uSharp').oninput = e => { $('uSharpV').textContent = e.target.value + '%'; clearPre(); };
+$('uDenoise').oninput = e => { $('uDenoiseV').textContent = e.target.value + '%'; clearPre(); };
+$('uFmt').onchange = $('uNearest').onchange = clearPre;
+function applyPreset(key, note) {
+  const p = UP_PRESETS[key];
+  $('uScale').value = p.s; $('uSharp').value = p.sharp; $('uDenoise').value = p.dn;
+  $('uSharpV').textContent = p.sharp + '%'; $('uDenoiseV').textContent = p.dn + '%';
+  $('uFmt').value = p.fmt; $('uNearest').checked = p.near;
+  for (const b of $('uPresets').children) b.classList.toggle('on', b.dataset.p === key);
+  $('uSuggest').textContent = note || '';
+  upEst();
+}
+for (const b of $('uPresets').children) b.onclick = () => applyPreset(b.dataset.p);
+
+$('uGo').onclick = async () => {
+  if (upBusy || !upBmp) return;
+  upBusy = true; $('uGo').disabled = true;
+  const prog = $('uProg'), st = $('uStatus');
+  prog.classList.remove('hide'); prog.value = 0;
+  try {
+    const d = upDims(), nearest = $('uNearest').checked, amt = +$('uSharp').value / 100;
+    const c0 = document.createElement('canvas'); c0.width = upBmp.width; c0.height = upBmp.height;
+    const x0 = c0.getContext('2d', { willReadFrequently: true }); x0.drawImage(upBmp, 0, 0);
+    let src = x0.getImageData(0, 0, c0.width, c0.height);
+    const dn = +$('uDenoise').value / 100, p0 = dn > 0 ? 0.15 : 0, p1 = p0 + 0.55;
+    if (dn > 0) { st.textContent = 'Gürültü azaltılıyor…'; await wait(10); src = await denoise(src, dn, v => { prog.value = v * p0; }); }
+    st.textContent = 'Büyütülüyor…'; await wait(10);
+    const out = await resample(src, d.w, d.h, nearest, v => { prog.value = p0 + v * 0.55; });
+    if (amt > 0 && !nearest) {
+      st.textContent = 'Keskinleştiriliyor…'; await wait(10);
+      await unsharp(out, d.w, d.h, amt, clamp(0.6 + 0.3 * d.s, 0.8, 2.2), v => { prog.value = p1 + v * (0.95 - p1); });
+    }
+    st.textContent = 'Kaydediliyor…'; await wait(10);
+    const c1 = document.createElement('canvas'); c1.width = d.w; c1.height = d.h;
+    c1.getContext('2d').putImageData(new ImageData(out, d.w, d.h), 0, 0);
+    let cv = c1; const fmt = $('uFmt').value;
+    if (fmt === 'jpeg') {                                        // JPEG saydamlık tutmaz: beyaz zemine bas
+      cv = document.createElement('canvas'); cv.width = d.w; cv.height = d.h;
+      const x2 = cv.getContext('2d'); x2.fillStyle = '#fff'; x2.fillRect(0, 0, d.w, d.h); x2.drawImage(c1, 0, 0);
+    }
+    const blob = await new Promise(r => cv.toBlob(r, 'image/' + fmt, 0.92));
+    const ext = blob.type === 'image/jpeg' ? 'jpg' : blob.type === 'image/webp' ? 'webp' : 'png';
+    const url = URL.createObjectURL(blob);
+    const base = upFile.name.replace(/\.[^.]+$/, '');
+    const sTxt = (+d.s.toFixed(2)).toString().replace('.', '_');
+    $('uOut').innerHTML = `<b>Hazır</b> — ${d.w}×${d.h}px, ${(blob.size / 1048576).toFixed(2)} MB`
+      + `<div class="hint" style="margin-top:4px">Resme basılı tutarak orijinaliyle karşılaştırabilirsin.</div>`
+      + `<div class="cmp" id="uCmp"><img src="${url}"><img class="orig" src="${upUrl}"${nearest ? ' style="image-rendering:pixelated"' : ''}></div><br>`
+      + `<a class="dl" href="${url}" download="${base}_${sTxt}x.${ext}">Resmi indir</a>`;
+    const cmp = $('uCmp'), hold = v => () => cmp.classList.toggle('hold', v);
+    cmp.onpointerdown = hold(true); cmp.onpointerup = cmp.onpointerleave = cmp.onpointercancel = hold(false);
+    cmp.ondragstart = e => e.preventDefault();
+    $('uOut').classList.remove('hide');
+    st.textContent = '';
+  } catch (err) {
+    st.textContent = 'Hata: ' + err.message;
+  }
+  prog.classList.add('hide'); upBusy = false; upEst();
+};
+</script>
+<script src="pulsar.js"></script>
+<script src="/tema.js"></script>
+</body>
+</html>

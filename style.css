@@ -1,0 +1,59 @@
+/* Ana sayfa ve 404 yerleşimi. Renkler ve ortak parçalar tema.css'te. */
+body{
+  min-height:100vh;display:flex;flex-direction:column;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:14px;
+}
+a{color:inherit}
+.shell{width:100%;max-width:960px;margin:0 auto}
+main.shell{flex:1;display:grid;gap:14px;align-content:start}
+
+/* üst durum çubuğu */
+.bar{display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:10px 10px 10px 14px;min-height:68px;
+  position:relative;border:1px solid var(--line2);background:var(--panel)}
+.bar::before{content:"";position:absolute;left:-1px;top:-1px;width:7px;height:7px;border-left:1px solid var(--accent);border-top:1px solid var(--accent)}
+.brand{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
+.brand-ic{flex:none;width:22px;height:22px;color:var(--cyan)}
+.brand h1{margin:0;font:700 17px/1 var(--f-disp);letter-spacing:.16em;text-transform:uppercase;color:var(--ink)}
+.brand p{margin:5px 0 0;font:500 10px/1.2 var(--f-disp);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+
+/* bölüm başlığındaki sayaç */
+.win-h .count{font:500 10.5px/1 var(--f-mono);color:var(--faint)}
+.win-h .note{font:500 10px/1 var(--f-disp);letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+
+/* proje kartları */
+.grid{list-style:none;margin:0;padding:0;display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))}
+.card{position:relative;display:flex;flex-direction:column;height:100%;padding:12px 14px;text-decoration:none;
+  background:var(--raise);border:1px solid var(--line);transition:border-color .12s,background-color .12s}
+.card::before{content:"";position:absolute;left:-1px;top:-1px;width:7px;height:7px;border-left:1px solid transparent;border-top:1px solid transparent;transition:border-color .12s}
+.card:hover,.card:focus-visible{border-color:var(--line3);background:var(--raise2);outline:none}
+.card:hover::before,.card:focus-visible::before{border-color:var(--accent)}
+.card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.card-tag{font:600 9.5px/1 var(--f-disp);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);padding:4px 6px;border:1px solid var(--line2)}
+.card-no{font:500 10.5px/1 var(--f-mono);color:var(--faint)}
+.card h3{margin:0 0 4px;font:600 13.5px/1.25 var(--f-disp);letter-spacing:.06em;text-transform:uppercase;color:var(--cyan)}
+.card p{margin:0;flex:1;font-size:12.5px;line-height:1.45;color:var(--dim)}
+.card-go{margin-top:10px;font:600 10.5px/1 var(--f-disp);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);transition:color .12s}
+.card:hover .card-go,.card:focus-visible .card-go{color:var(--accent)}
+
+/* imza */
+.sig{padding:36px 0 22px;text-align:center;font:500 10px/1 var(--f-disp);letter-spacing:.16em;text-transform:uppercase;color:var(--faint);opacity:.7}
+.sig a{text-decoration:none}
+.sig a:hover{color:var(--dim)}
+
+/* 404 */
+.nf{padding:28px 22px}
+.nf .code{margin:6px 0 10px;font:600 clamp(56px,14vw,88px)/1 var(--f-disp);letter-spacing:.06em;color:var(--line3)}
+.nf .lead{margin:0;max-width:520px;color:var(--dim)}
+.nf .back{display:inline-block;margin-top:20px;padding:9px 14px;font:600 10.5px/1 var(--f-disp);letter-spacing:.16em;text-transform:uppercase;
+  text-decoration:none;color:var(--cyan);border:1px solid var(--line2);background:var(--raise)}
+.nf .back:hover{border-color:var(--line3);color:var(--accent)}
+
+@media (max-width:520px){
+  .bar{min-height:60px}
+  .brand h1{font-size:15px;letter-spacing:.12em}
+}
+@media (prefers-reduced-motion:reduce){
+  .card,.card::before,.card-go,.mode{transition:none}
+}
